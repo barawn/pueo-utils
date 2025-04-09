@@ -46,9 +46,8 @@ if not args.port:
     if args.pueo:
         sys.path.append(args.pueo)
     from pueo.common.serialcobsdevice import SerialCOBSDevice    
-    port = SerialCOBSDevice.find_serial_devices(name='RB')[0][0]
-else:
-    port = args.port
+    print("Available ports:", SerialCOBSDevice.find_serial_devices(name='RB'))
+    sys.exit(0)
 
 print("Using", port)
 dev = Serial(port, baudrate=9600)
