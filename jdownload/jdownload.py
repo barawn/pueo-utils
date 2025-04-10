@@ -53,18 +53,25 @@ JDLD_MAILBOX = "0x70000000"
 endfile = b'\x04'
 
 # stupid utility crap
-def startStopUart( xsct, en ):
+def startStopUart( xsct, en, jtagsn = None ):
+    if jtagsn:
+        cortexTargetStr = 'target -set -filter { name =~ "Cortex-A53 #0" && jtag_cable_serial =~ "%s" }' % jtagsn
+        psuTargetStr = 'target -set -filter { name =~ "PSU" && jtag_cable_serial =~ "%s" }' % jtagsn
+    else:
+        cortexTargetStr = 'target -set -filter { name =~ "Cortex-A53 #0" }'
+        psuTargetStr = 'target -set -filter { name =~ "PSU" }'   
+
     if en:
         cmd = 'jtagterminal -socket'
     else:
         cmd = 'jtagterminal -stop'
-    resp = xsct.do('target -set -filter { name =~ "Cortex-A53 #0" }')
+    resp = xsct.do(cortexTargetStr)    
     resp = xsct.do(cmd)
     if en:
         termPort = int(resp)
     else:
         termPort = None
-    resp = xsct.do('target -set -filter { name =~ "PSU" }')
+    resp = xsct.do(psuTargetStr)
     return termPort
 
 def getLine( sock ):
@@ -165,7 +172,8 @@ parser.add_argument("--mode", help="either pynq or surf (default)",
 parser.add_argument("--safeStart",action='store_true',
                     help="Try to read out all characters possible before starting (takes 5+ seconds)")
 parser.add_argument("--pysct", help="path to pysct repository")
-parser.add_argument("--postcmds",
+parser.add_argument("--jtagsn", help="JTAG serial number")
+parser.add_argument("--postcmd",
                     help=textwrap.dedent(''' post-download command file. \
                     This file is a templated file containing commands to \
                     run after download is complete. \
@@ -240,7 +248,7 @@ else:
 #tf = NamedTemporaryFile()
 
 # spawn the terminal (this also bounces us back to PSU as a target)
-termPort = startStopUart(xsct, True)
+termPort = startStopUart(xsct, True, jtagsn=args.jtagsn)
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server_address = (host, termPort)
@@ -266,7 +274,7 @@ try:
         print("%s: got %d bytes - " % (prog, len(msg)))
         print("{!r}".format(msg))
         print("expected {!r}".format(prompt))
-        startStopUart(xsct, False)
+        startStopUart(xsct, False, jtagsn=args.jtagsn)
         exit(1)
 
     # execute the bridge
@@ -278,7 +286,7 @@ try:
         print("%s: jdld says it is version %s??" % (prog, ln[:-2]))
         print("%s: I was expecting %s" % (prog, JDLD_VERSION))
         sock.sendall(endfile)
-        startStopUart(xsct, False)
+        startStopUart(xsct, False, jtagsn=args.jtagsn)
         exit(1)
     # create the remote file
     crCommand = b'C' + remoteFileBytes + b'\n'
@@ -289,7 +297,7 @@ try:
         print("%s: maybe a previous transfer is borked - open terminal, run jc, then send \"D 0\"" % prog)
         sock.sendall(endfile)
         sock.close()
-        startStopUart(xsct, False)
+        startStopUart(xsct, False, jtagsn=args.jtagsn)
         exit(1)
     # NOW IT'S FUN TIME
     chunkCount = 0
@@ -337,8 +345,9 @@ try:
                 print("%s: got response %s ????" % (prog, resp))
                 sock.sendall(b'D0\n'+endfile)
                 sock.close()
-                startStopUart(xsct, False)
+                startStopUart(xsct, False, jtagsn=args.jtagsn)
                 exit(1)
+
         if v > 0:
             print("downloaded...", end='')
         if chunkLen != JDLD_CHUNK_SIZE:
@@ -351,7 +360,7 @@ try:
             print("%s: jdld did not respond OK to chunk download (%s)!" % (prog, ln[:-2]))
             sock.sendall(endfile)
             sock.close()
-            startStopUart(xsct, False)
+            startStopUart(xsct, False, jtagsn=args.jtagsn)
             exit(1)
         if v > 0:
             print("complete.")
@@ -372,7 +381,7 @@ try:
             msg = getPrompt( sock, prompt, prog, v=v)
             print(msg)
     sock.close()
-    startStopUart(xsct, False)
+    startStopUart(xsct, False, jtagsn=args.jtagsn)
 finally:
     print("%s : exiting." % prog)
     
