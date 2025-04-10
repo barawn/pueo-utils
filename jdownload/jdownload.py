@@ -179,7 +179,7 @@ parser.add_argument("--postcmd",
                     run after download is complete. \
                     See string.Template - available template variables \
                     are localFile, localPath, baseFile.'''))
-                    
+parser.add_argument("--yes", action='store_true', help="don't prompt for postcmd, just do it")                    
 
 args = parser.parse_args()
 if args.pysct:
@@ -198,14 +198,15 @@ if args.postcmd:
         exit(1)
     txt = p.read_text()
     t = Template(txt)
-    postCmds = t.substitute(d).splitlines()
-    print("After transfer, I will:")
-    for l in postCmds:
-        print(f'execute: {l}')
-    i = input("Confirm with yep:")
-    if i != 'yep':
-        print("Exiting instead.")
-        exit(1)
+    postCmds = t.substitute(templDict).splitlines()
+    if not args.yes:
+        print("After transfer, I will:")
+        for l in postCmds:
+            print(f'execute: {l}')
+        i = input("Confirm with yep:")
+        if i != 'yep':
+            print("Exiting instead.")
+            exit(1)
         
 # now import
 from pysct.core import Xsct
@@ -377,9 +378,9 @@ try:
     # any post-commands?
     if postCmds:
         for cmd in postCmds:
-            sock.sendall(cmd+'\r\n')
-            msg = getPrompt( sock, prompt, prog, v=v)
-            print(msg)
+            sock.sendall(cmd.encode()+b'\n')
+            msg = getPrompt( sock, prompt, prog, v=1)
+            print(msg.decode())
     sock.close()
     startStopUart(xsct, False, jtagsn=args.jtagsn)
 finally:
