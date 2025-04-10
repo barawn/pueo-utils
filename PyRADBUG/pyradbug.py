@@ -49,6 +49,7 @@ if not args.port:
     print("Available ports:", SerialCOBSDevice.find_serial_devices(name='RB'))
     sys.exit(0)
 
+port=args.port
 print("Using", port)
 dev = Serial(port, baudrate=9600)
 time.sleep(2)
