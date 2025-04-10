@@ -25,10 +25,13 @@ if pb is None:
 import socket
 import sys
 import argparse
+import textwrap
 import os
+from pathlib import Path
 from sys import platform
 from tempfile import NamedTemporaryFile
 from math import ceil
+from string import Template
 
 translate_path = lambda x : x
 # cygwin needs the pycygwin module for cygpath
@@ -103,6 +106,29 @@ def getExpected( sock, expect):
             return False
     return True
     
+def getPrompt( sock, prompt, prog, v=0, safeStart=False):
+    msg = b''
+    while True:
+        try:
+            data = sock.recv(500)
+            msg += data
+            if v > 1:
+                print('%s: got %d bytes, up to %d' % (prog, len(data), len(msg)))
+            if (msg[-len(prompt):None] == prompt):
+                if safeStart:
+                    if v > 0:
+                        print('%s: found prompt after %d bytes, continuing due to safeStart'
+                              % (prog, len(msg)))
+                else:
+                    if v > 0:
+                        print('%s: found prompt after %d bytes'
+                              % (prog, len(msg)))
+                        break            
+        except socket.timeout:
+            if v > 0:
+                print('%s: timed out waiting for more data' % prog)
+            break
+    return msg
 
 prog = "jdownload"
 bridge = b'jb'
@@ -139,11 +165,40 @@ parser.add_argument("--mode", help="either pynq or surf (default)",
 parser.add_argument("--safeStart",action='store_true',
                     help="Try to read out all characters possible before starting (takes 5+ seconds)")
 parser.add_argument("--pysct", help="path to pysct repository")
+parser.add_argument("--postcmds",
+                    help=textwrap.dedent(''' post-download command file. \
+                    This file is a templated file containing commands to \
+                    run after download is complete. \
+                    See string.Template - available template variables \
+                    are localFile, localPath, baseFile.'''))
+                    
 
 args = parser.parse_args()
 if args.pysct:
     sys.path.append(args.pysct)
 
+splitFile = args.localFile.split('/')
+
+postCmds = None
+if args.postcmd:
+    templDict = dict(localFile = args.localFile,
+                     localPath = '/'.join(splitFile[:-1]),
+                     baseFile = splitFile[-1])    
+    p = Path(args.postcmd)
+    if not p.exists():
+        print(f'cannot find {args.postcmd}')
+        exit(1)
+    txt = p.read_text()
+    t = Template(txt)
+    postCmds = t.substitute(d).splitlines()
+    print("After transfer, I will:")
+    for l in postCmds:
+        print(f'execute: {l}')
+    i = input("Confirm with yep:")
+    if i != 'yep':
+        print("Exiting instead.")
+        exit(1)
+        
 # now import
 from pysct.core import Xsct
     
@@ -198,28 +253,8 @@ try:
         print('%s: fetching prompt' % prog)
     sock.sendall(b'\n')
     sock.settimeout(5)
-    msg = b''
-    while True:
-        try:
-            data = sock.recv(500)
-            msg += data
-            if v > 1:
-                print('%s: got %d bytes, up to %d' % (prog, len(data), len(msg)))
-            if (msg[-len(prompt):None] == prompt):
-                if args.safeStart:
-                    if v > 0:
-                        print('%s: found prompt after %d bytes, continuing due to safeStart'
-                              % (prog, len(msg)))
-                else:
-                    if v > 0:
-                        print('%s: found prompt after %d bytes'
-                              % (prog, len(msg)))
-                        break            
-        except socket.timeout:
-            if v > 0:
-                print('%s: timed out waiting for more data' % prog)
-            break
     # did we get our prompt
+    msg = getPrompt( sock, prompt, prog, v=v, safeStart=args.safeStart)
     if v > 1:
         print("%s: got %d bytes - " % (prog, len(msg)))
         print("{!r}".format(msg))
@@ -330,6 +365,12 @@ try:
     sock.sendall(endfile)
     # clear out the prompt
     ln = getExpected(sock, b'jc: exiting\r\n'+prompt)
+    # any post-commands?
+    if postCmds:
+        for cmd in postCmds:
+            sock.sendall(cmd+'\r\n')
+            msg = getPrompt( sock, prompt, prog, v=v)
+            print(msg)
     sock.close()
     startStopUart(xsct, False)
 finally:
