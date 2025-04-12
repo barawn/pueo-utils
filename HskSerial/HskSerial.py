@@ -224,6 +224,6 @@ def surfNum(addr):
     return addr - 128
 
 def turfioNum(addr):
-    return (addr-64) >> 
+    return (addr-64) >> 3
 
 
