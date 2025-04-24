@@ -178,7 +178,7 @@ parser.add_argument("--postcmd",
                     This file is a templated file containing commands to \
                     run after download is complete. \
                     See string.Template - available template variables \
-                    are localFile, localPath, baseFile.'''))
+                    are localFile, localPath, remoteFile, baseFile.'''))
 parser.add_argument("--yes", action='store_true', help="don't prompt for postcmd, just do it")                    
 
 args = parser.parse_args()
@@ -191,6 +191,7 @@ postCmds = None
 if args.postcmd:
     templDict = dict(localFile = args.localFile,
                      localPath = '/'.join(splitFile[:-1]),
+                     remoteFile = args.remoteFile,
                      baseFile = splitFile[-1])    
     p = Path(args.postcmd)
     if not p.exists():
