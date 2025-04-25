@@ -67,7 +67,7 @@ class EventServer:
         # + 2 8-bit zeros
         # + 0x80 (for allow increment) or 0x00
         for i in range(self.max_addr):
-            self.ackmsg(addr, i < max_allow, verbose=True)
+            self.ackmsg(i, i < max_allow, verbose=True)
 
     def close(self):
         self.ctrlmsg(b'CL')
