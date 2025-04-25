@@ -58,7 +58,8 @@ class EventServer:
         # the 8 bytes here correspond to (in this order)
         # 7:0, 15:8, 23:16, 31:24, 39:32, 47:40, 55:48, 63:56
         # port is stored little-endian in TURF in 15:0
-        data = self.local_event_port.to_bytes(2, 'little') + int(self.local_ip).to_bytes(4, 'little') + b'\x00\x00'
+        # top 2 bytes are the command, dumbass
+        data = self.local_event_port.to_bytes(2, 'little') + int(self.local_ip).to_bytes(4, 'little')
         self.ctrlmsg(b'OP', data=data)
         # now we have to build the acks
         # acks are (addr << 20) from 0 to max_addr (32 bits)
@@ -89,8 +90,11 @@ class EventServer:
         return (respaddr, resptag, ctlbyte)
             
     def ctrlmsg(self, cmd, data=b''):
-        msg = cmd + bytes(data)
-        msg = msg.rjust(8, b'\x00')[::-1]
+        # ok ok ok: the way this works is that our command has to come
+        # first, no matter what.
+        msg = cmd[::-1] + data[::-1]
+        # and pad up to 8
+        msg = msg.ljust(8, b'\x00')
         self.cs.sendto( msg, self.turfcs )
         rmsg = self.cs.recv(1024)
         return rmsg
