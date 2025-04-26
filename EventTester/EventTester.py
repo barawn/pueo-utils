@@ -73,7 +73,8 @@ class EventServer:
         self.ctrlmsg(b'CL')
             
     def ackmsg(self, addr, allow, verbose=True):
-        msg = (addr<<12).to_bytes(4, 'little')
+        addr = addr & 0xFFF
+        msg = (addr<<20).to_bytes(4, 'little')
         msg += self.acktag.to_bytes(1, 'little')
         msg += b'\x00\x00'
         msg += b'\x80' if allow else b'\x00'
@@ -81,10 +82,12 @@ class EventServer:
         # should have a timeout check here!!!!!
         rmsg = self.cs.recv(1024)
         ctlbyte = rmsg[7]
-        respaddr = (int.from_bytes(rmsg[0:4], 'little'))>>12
+        respaddr = (int.from_bytes(rmsg[0:4], 'little'))>>20
         resptag = rmsg[4]
         if verbose:
             print(f'ack response: tag {resptag} addr {respaddr} ctl {hex(ctlbyte)}')
+            print(f'ack response: {rmsg.hex(sep=' ')}')
+            
         # shoud do an ack check here but whatevs
         self.acktag = (self.acktag + 1) & 0xFF
         return (respaddr, resptag, ctlbyte)
