@@ -66,7 +66,7 @@ class EventServer:
         # + 8 bit tag (incrementing)
         # + 2 8-bit zeros
         # + 0x80 (for allow increment) or 0x00
-        for i in range(self.max_addr):
+        for i in range(self.max_addr+1):
             self.ackmsg(i, i < max_allow, verbose=True)
 
     def close(self):
