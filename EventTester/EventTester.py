@@ -56,7 +56,9 @@ class EventServer:
 
     def open(self, max_allow=1):
         # Port will need to come first, so it goes ip then port.
-        data = int(self.local_ip).to_bytes(4, 'little') + self.local_event_port.to_bytes(2, 'little')        
+        # this is pretty darn horrible, sigh.
+        # ctrlmsg flips the byte order so we put it big here.
+        data = int(self.local_ip).to_bytes(4, 'big') + self.local_event_port.to_bytes(2, 'big')        
         self.ctrlmsg(b'OP', data=data)
         # now we have to build the acks
         # acks are (addr << 20) from 0 to max_addr (32 bits)
