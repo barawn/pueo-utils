@@ -22,7 +22,10 @@ class EventServer:
                  local_ip="10.68.65.1",
                  local_port=21347,
                  local_event_port=21349,
-                 remote_ip="10.68.65.81"
+                 remote_ip="10.68.65.81",
+                 # n.b. the kernel doubles this value
+                 # when set by SO_RCVBUF
+                 rcvbuf=3*1024*1024
                  ):
         self.local_ip = ipaddress.ip_address(local_ip)
         self.local_port = local_port
@@ -34,7 +37,8 @@ class EventServer:
         self.cs.bind( (str(self.local_ip), self.local_port ) )        
         self.es = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.es.bind( (str(self.local_ip), self.local_event_port ) )        
-
+        self.es.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, rcvbuf)
+        
         self.turfcs = ( str(self.remote_ip), EVENT_CTRL_PORT )
         self.turfack = ( str(self.remote_ip), EVENT_ACK_PORT )
         self.turfnack = ( str(self.remote_ip), EVENT_NACK_PORT )
@@ -58,7 +62,7 @@ class EventServer:
         # Port will need to come first, so it goes ip then port.
         # this is pretty darn horrible, sigh.
         # ctrlmsg flips the byte order so we put it big here.
-        data = int(self.local_ip).to_bytes(4, 'big') + self.local_event_port.to_bytes(2, 'big')        
+        data = int(self.local_ip).to_bytes(4, 'big') + self.local_event_port.to_bytes(2, 'big')
         self.ctrlmsg(b'OP', data=data)
         # now we have to build the acks
         # acks are (addr << 20) from 0 to max_addr (32 bits)
