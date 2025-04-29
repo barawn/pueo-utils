@@ -55,11 +55,8 @@ class EventServer:
         self.nacktag = 0
 
     def open(self, max_allow=1):
-        # the 8 bytes here correspond to (in this order)
-        # 7:0, 15:8, 23:16, 31:24, 39:32, 47:40, 55:48, 63:56
-        # port is stored little-endian in TURF in 15:0
-        # top 2 bytes are the command, dumbass
-        data = self.local_event_port.to_bytes(2, 'little') + int(self.local_ip).to_bytes(4, 'little')
+        # Port will need to come first, so it goes ip then port.
+        data = int(self.local_ip).to_bytes(4, 'little') + self.local_event_port.to_bytes(2, 'little')        
         self.ctrlmsg(b'OP', data=data)
         # now we have to build the acks
         # acks are (addr << 20) from 0 to max_addr (32 bits)
