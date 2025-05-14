@@ -221,7 +221,16 @@ class PyZynqMP:
         # check to see if we even need to do anything
         if libfirmwarefn != bitfn:
             shutil.copyfile(bitfn, libfirmwarefn)
-
+        self.__load(is_overlay, basefn, libfirmwarefn, ovfn)
+        if self.running():
+            return True
+        else:
+            print("Firmware load failed: trying again!!")
+            time.sleep(1)
+            self.__load(is_overlay, basefn, libfirmwarefn, ovfn)
+            return self.running()
+            
+    def __load(self, is_overlay, basefn, libfirmwarefn, ovfn):
         # if we are not loading an overlay just do this
         if not is_overlay:
             fd = os.open(self.FIRMWARE_PATH, os.O_WRONLY)
@@ -231,7 +240,6 @@ class PyZynqMP:
             if os.path.exists(self.CURRENT) or os.path.islink(self.CURRENT):
                 os.remove(self.CURRENT)
             os.symlink(libfirmwarefn, self.CURRENT)
-            return True
         else:
             if not os.path.exists(self.OVERLAY):
                 os.mkdir(self.OVERLAY)
@@ -242,7 +250,7 @@ class PyZynqMP:
             if os.path.exists(self.CURRENT) or os.path.islink(self.CURRENT):
                 os.remove(self.CURRENT)
             os.symlink(libfirmwareovfn, self.CURRENT)
-            return True
+        
 
     def raw_iio(self, fnList):
         if type(fnList) is not list:
