@@ -206,6 +206,8 @@ class PyZynqMP:
             raise TypeError("%s is for a %s, this is a %s" %
                             (bitfn, dev, self.device))
         # copy the overlay if needed
+        ovfn = None
+        libfirmwareovfn = None
         if is_overlay:
             ovfn = os.path.basename(filename)
             libfirmwareovfn = self.LIBFIRMWARE_PATH + ovfn
@@ -221,16 +223,16 @@ class PyZynqMP:
         # check to see if we even need to do anything
         if libfirmwarefn != bitfn:
             shutil.copyfile(bitfn, libfirmwarefn)
-        self.__load(is_overlay, basefn, libfirmwarefn, ovfn)
+        self.__load(is_overlay, basefn, libfirmwarefn, ovfn, libfirmwareovfn)
         if self.running():
             return True
         else:
             print("Firmware load failed: trying again!!")
             time.sleep(1)
-            self.__load(is_overlay, basefn, libfirmwarefn, ovfn)
+            self.__load(is_overlay, basefn, libfirmwarefn, ovfn, libfirmwareovfn)
             return self.running()
             
-    def __load(self, is_overlay, basefn, libfirmwarefn, ovfn):
+    def __load(self, is_overlay, basefn, libfirmwarefn, ovfn, libfirmwareovfn):
         # if we are not loading an overlay just do this
         if not is_overlay:
             fd = os.open(self.FIRMWARE_PATH, os.O_WRONLY)
