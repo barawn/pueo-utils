@@ -2,6 +2,7 @@ import os
 import uuid
 import struct
 import shutil
+import time
 from pathlib import Path
 
 # PYZYNQMP_FAKE defines a prefix for use in a simulator
