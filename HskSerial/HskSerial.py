@@ -4,7 +4,8 @@ from serial import Serial
 from cobs import cobs
 import sys
 import socket
-
+import os
+import struct
 
 
 # dev.send(HskPacket(0x80, 0x00)) as well as fully-filling it
@@ -170,6 +171,61 @@ class HskEthernet(HskBase):
         self.hs.bind(self.localIpPort)
         self._writeImpl = lambda x : self.hs.sendto(x, self.remoteIpPort)
         self._readImpl = lambda : self.hs.recv(1024)
+
+
+    def upload(self, fn, destfn=None):
+        """ 
+        WIP DO NOT USE
+        Uploads a file via the secret hskSpiBridge uploader methods.
+        """
+        # This is magic: we need to make sure that our payload size + 1 byte
+        # is a multiple of 32, because we read out in chunks of 32 and can't
+        # determine anything other than that.
+        PAYLOAD_SIZE = 1023
+        def fwupdHeader(fn, size):
+            hdr = bytearray(b'PYFW')
+            flen = size
+            hdr += struct.pack(">I", flen)
+            hdr += fn.encode()
+            hdr += b'\x00'
+            hdr += (256 - sum(hdr) % 256).to_bytes(1, 'big')
+            return (hdr, flen)
+        if not destfn:
+            destfn = '/home/root/' + os.path.basename(fn)
+        if not os.path.isfile(fn):
+            raise ValueError(f'{fn} is not a regular file')
+        hdr, flen = fwupdHeader(destfn, os.path.getsize(fn))
+        toRead = PAYLOAD_SIZE - len(hdr)
+        toRead = flen if flen < toRead else toRead
+        print(f'Uploading {fn} to {destfn}')
+        # secret reset
+        self._writeImpl(b'\x00'*32)
+        # ack        
+        r = self._readImpl()
+        if r[0] == 0:
+            print('Reset was acknowledged.')
+        d = hdr
+        written = 0
+#        if pb2:
+#            uploadbar = make_bar(flen, uwidgets).start()
+#            update = lambda v, n : uploadbar.update()
+#            finish = uploadbar.finish
+#        else:
+#            update = lambda v, n : print(f'{v}/{n}')
+#            finish = lambda : None
+        with open(fn, "rb") as f:
+            while written < flen:
+                d += f.read(toRead)
+                nb = len(d)
+                padBytes = PAYLOAD_SIZE - nb if nb < PAYLOAD_SIZE else 0
+                d += padBytes*b'\x00'
+                self._writeImpl(b'\x00'+d)
+                r = self._readImpl()
+                print(f'ack: {r[0]}')
+                written += toRead
+                remain = flen - written
+                toRead = remain if remain < PAYLOAD_SIZE else PAYLOAD_SIZE
+                d = b''
     
 # build up and send the command given the destination, type,
 # and the data to deliver if any.
