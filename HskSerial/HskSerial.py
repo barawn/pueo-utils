@@ -133,6 +133,22 @@ class HskBase:
         self._writeImpl = lambda x : None
         self._readImpl = lambda : none
 
+    def repeat_receive(self, daddr, cmd):
+        """ Retrieves output (called inside HskBase.journal) """
+        res = ''
+        pkt = self.receive()
+        res += pkt.data.decode()
+        while len(pkt.data) == 255:
+            self.send(HskPacket(daddr, cmd))
+            pkt = self.receive()
+            res += pkt.data.decode()
+        return res
+    
+    def journal(self, daddr, line='-u pueo-squashfs -o cat -n 10'):
+        """ Fetches the output of a journalctl command. Options passed in line. """
+        self.send(HskPacket(daddr, 'eJournal', data=line.encode()))
+        return self.repeat_receive(daddr, 'eJournal')
+        
     def send(self, pkt, override=False):
         """ Send a housekeeping packet. Uses HskSerial.src as source unless override is true or no source was provided """
         if not isinstance(pkt, HskPacket):
