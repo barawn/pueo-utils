@@ -104,4 +104,11 @@ class EventServer:
         self.cs.sendto( msg, self.turfcs )
         rmsg = self.cs.recv(1024)
         return rmsg
+    
+    def event_receive(self):
+        ## This is the dumbest event receive ever
+        frg = []
+        for i in range(449):
+            frg.append(self.es.recv(1024))
+        return frg
         
