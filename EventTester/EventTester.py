@@ -105,7 +105,7 @@ class EventServer:
         rmsg = self.cs.recv(1024)
         return rmsg
     
-    def eventReceive(self):
+    def event_receive(self):
         ## This is the dumbest event receive ever
         frg = []
         for i in range(448):
