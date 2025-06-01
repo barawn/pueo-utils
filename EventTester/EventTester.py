@@ -108,7 +108,7 @@ class EventServer:
     def event_receive(self):
         ## This is the dumbest event receive ever
         frg = []
-        for i in range(448):
+        for i in range(449):
             frg.append(self.es.recv(1024))
         return frg
         
