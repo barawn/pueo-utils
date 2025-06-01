@@ -40,7 +40,8 @@ class HskPacket:
         "eRestart" : 0xBF,
         "eEnable" : 0xC8,
         "ePMBus" : 0xC9,
-        "eReloadFirmware" : 0xCA
+        "eReloadFirmware" : 0xCA,
+        "eError" : 0xFF
         }
 
     #  cmd, src range
