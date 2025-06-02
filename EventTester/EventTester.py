@@ -43,6 +43,8 @@ class EventServer:
         self.turfack = ( str(self.remote_ip), EVENT_ACK_PORT )
         self.turfnack = ( str(self.remote_ip), EVENT_NACK_PORT )
 
+        self.fragment_size = 1032
+
         # check if we're working
         self.mac = tohex(self.ctrlmsg(b'ID')[::-1][2:],s=':')
         print(f'Connected to: {self.mac}')
@@ -109,6 +111,6 @@ class EventServer:
         ## This is the dumbest event receive ever
         frg = []
         for i in range(449):
-            frg.append(self.es.recv(1024))
+            frg.append(self.es.recv(self.fragment_size))
         return frg
         

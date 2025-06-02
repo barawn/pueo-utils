@@ -127,12 +127,39 @@ class HskPacket:
         pkt += self.data
         pkt.append((256-(sum(pkt[4:]))) & 0xFF)
         return cobs.encode(pkt)
+    
+    @staticmethod
+    def deviceType(addr):
+        if addr == 0x60:
+            return 'TURF'
+        elif addr in (0x40,0x48,0x50,0x58):
+            return 'TURFIO'
+        elif addr >= 0x80:
+            return 'SURF'
+
+    @staticmethod
+    def surfNum(addr):
+        return addr - 128
+
+    @staticmethod
+    def turfioNum(addr):
+        if (addr == 0x58):
+            tionum = 0
+        elif (addr == 0x50):
+            tionum = 1
+        elif (addr == 0x40):
+            tionum = 2
+        elif (addr == 0x48):
+            tionum = 3
+        else:
+            print("Not a TURFIO!")
+        return tionum
 
 class HskBase:
     def __init__(self, srcId):
         self.src = srcId
         self._writeImpl = lambda x : None
-        self._readImpl = lambda : none
+        self._readImpl = lambda : None
 
     def repeat_receive(self, daddr, cmd):
         """ Retrieves output (called inside HskBase.journal) """
@@ -284,7 +311,9 @@ def getT(msb, lsb, kind = 'SURF'):
     else: 
         return None
 
-def deviceType(addr):
+
+## These are being moved into the HskPacket class
+'''def deviceType(addr):
     if addr == 0x60:
         return 'TURF'
     elif addr in (0x40,0x48,0x50,0x58):
@@ -297,6 +326,6 @@ def surfNum(addr):
     return addr - 128
 
 def turfioNum(addr):
-    return (addr-64) >> 3
+    return (addr-64) >> 3'''
 
 
