@@ -6,6 +6,7 @@ import sys
 import socket
 import os
 import struct
+from functools import partial
 
 
 # dev.send(HskPacket(0x80, 0x00)) as well as fully-filling it
@@ -44,29 +45,64 @@ class HskPacket:
         "eError" : 0xFF
         }
 
-    #  cmd, src range
+    ##################################################################
+    #               Conversion functions                             #
+    ##################################################################
+    
+    @staticmethod
+    def __turfio_hotswap_temp(d):
+        """ pass the 2 bytes from the packet, get temperature of TURFIO hotswap """
+        # this is 503.975/4096
+        return (int.from_bytes(d, 'big') * 0.123040771484375) - 273.15
+
+    @staticmethod
+    def __surf_hotswap_temp(d):
+        """ pass the 2 bytes from the packet, get temperature of SURF hotswap """
+        # this is 10/42 and 31880/42
+        return (int.from_bytes(d, 'big') * 0.238095238095238) - 759.047619047619
+
+    @staticmethod
+    def __zynqmp_temp(d):
+        """ pass the 2 bytes from the packet, get temp of APU or RPU """
+        # this is 509.3140064/65536
+        return (int.from_bytes(d, 'big') * 0.007771514990234375) - 280.2308787
+    
+    ###################################################################
+    #                 Pretty functions                                #
+    ###################################################################
+    
+    @classmethod
+    def __pretty_turfio_temp(cls, src, d, brd):
+        tioNum = HskPacket.turfioNum(src)
+        s = { f'T_TURFIO_{tioNum}' : cls.__turfio_hotswap_temp(d[0:2])}
+        for i in range(7):
+            s[f'T_SURF{i+1}HS_{tioNum}'] = cls.__surf_hotswap_temp(d[2*i+2:2*i+4])
+        return s
+
+    @classmethod
+    def __pretty_zynqmp_temp(cls, src, d, brd):
+        return { f'T_APU_{brd}' : cls.__zynqmp_temp(d[0:2]),
+                 f'T_RPU_{brd}' : cls.__zynqmp_temp(d[2:4]) }
+        
+    @classmethod
+    def __pretty_zynqmp_identify(cls, src, d, brd):
+        l = d.decode().split('\x00')
+        return { 'DNA' : l[0],
+                 'MAC' : l[1],
+                 'vOS' : l[2],
+                 'vSOFT' : l[3],
+                 'hash' : l[4],
+                 'date' : l[5] }            
+    
+    # the tuples are needed because commands are the same but return values are not.
+    # the functions take source, data, board type (which is the second tuple element)
     prettifiers = {
-            ('eTemps', 'TURF') : lambda d, a : {
-                'T_APU_TURF' : getT(d[0],d[1],'TURF'),
-                'T_RPU_TURF' : getT(d[2],d[3],'TURF')
-                },
-            ('eTemps', 'SURF') : lambda d, a : {
-                'T_APU_SURF_' + str(surfNum(a)) : getT(d[0], d[1],'SURF'),
-                'T_RPU_SURF_' + str(surfNum(a)) : getT(d[2], d[3],'SURF')
-                },
-            ('eTemps', 'TURFIO') : lambda d, a : {
-                'T_TURFIO_'  + str(turfioNum(a)) : getT(d[0], d[1], 'TURFIO'),
-                'T_SURF1HS_' + str(turfioNum(a)) : getT(d[2], d[3], 'SURFSWAP'),
-                'T_SURF2HS_' + str(turfioNum(a)) : getT(d[4], d[5], 'SURFSWAP'),
-                'T_SURF3HS_' + str(turfioNum(a)) : getT(d[6], d[7], 'SURFSWAP'),
-                'T_SURF4HS_' + str(turfioNum(a)) : getT(d[8], d[9], 'SURFSWAP'),
-                'T_SURF5HS_' + str(turfioNum(a)) : getT(d[10],d[11],'SURFSWAP'),
-                'T_SURF6HS_' + str(turfioNum(a)) : getT(d[12],d[13],'SURFSWAP'),
-                'T_SURF7HS_' + str(turfioNum(a)) : getT(d[14],d[15],'SURFSWAP')
-                }
+        ('eTemps', 'TURF') : __pretty_zynqmp_temp,        
+        ('eTemps', 'SURF') : __pretty_zynqmp_temp,
+        ('eTemps', 'TURFIO') : __pretty_turfio_temp,
+        ('eIdentify', 'TURF') : __pretty_zynqmp_identify,
+        ('eIdentify', 'SURF') : __pretty_zynqmp_identify
     }
-
-
 
 
     strings = dict(zip(cmds.values(),cmds.keys()))
@@ -102,10 +138,9 @@ class HskPacket:
             cstr = "UNKNOWN(%2.2x)" % self.cmd
         myStr = cstr + " from " + "%2.2x" % self.src + " to " + "%2.2x" % self.dest
         if len(self.data):
-
             pretty_dict = self.prettyDict()
             if pretty_dict is not None:
-                myStr += ": " + str(pretty_dict)
+                myStr += ": " + ' '.join(map(lambda t : f'{t[0]} {t[1]}', pretty_dict.items()))
             elif asString:
                 myStr += ": " + self.data.decode()
             else:
@@ -114,9 +149,10 @@ class HskPacket:
 
 
     def prettyDict(self):
-            pretty_tuple =(self.strings[self.cmd], deviceType(self.src))
-            if pretty_tuple in self.prettifiers:
-                return self.prettifiers[pretty_tuple](self.data, self.src)
+        pretty_tuple =(self.strings[self.cmd], self.deviceType(self.src))
+        # hack, but it works
+        if pretty_tuple in self.prettifiers:
+            return self.prettifiers[pretty_tuple].__func__(self, self.src, self.data, pretty_tuple[1])
         
     def encode(self):
         pkt = bytearray(4)
@@ -143,17 +179,11 @@ class HskPacket:
 
     @staticmethod
     def turfioNum(addr):
-        if (addr == 0x58):
-            tionum = 0
-        elif (addr == 0x50):
-            tionum = 1
-        elif (addr == 0x40):
-            tionum = 2
-        elif (addr == 0x48):
-            tionum = 3
-        else:
-            print("Not a TURFIO!")
-        return tionum
+        d = { 0x58 : 0,
+              0x50 : 1,
+              0x40 : 2,
+              0x48 : 3 }
+        return d[addr] if addr in d else None
 
 class HskBase:
     def __init__(self, srcId):
@@ -296,36 +326,3 @@ def tohex(b, s=' '):
         return s.join(h[i:i+2] for i in range(0,len(h),2))
     else: 
         return b.hex(sep=s)
-    
-
-def getT(msb, lsb, kind = 'SURF'):
-
-    adc = msb * 256 + lsb; 
-
-    if kind == 'SURF' or kind == 'TURF':
-        return adc * 509.3140064 / (2**16) - 280.2308787
-    elif kind == 'TURFIO':
-        return adc * 503.975 / (2**12) - 273.15
-    elif kind == 'SURFSWAP':
-        return (adc * 10  - 31880) / 42
-    else: 
-        return None
-
-
-## These are being moved into the HskPacket class
-'''def deviceType(addr):
-    if addr == 0x60:
-        return 'TURF'
-    elif addr in (0x40,0x48,0x50,0x58):
-        return 'TURFIO'
-    elif addr >= 0x80:
-        return 'SURF'
-
-
-def surfNum(addr):
-    return addr - 128
-
-def turfioNum(addr):
-    return (addr-64) >> 3'''
-
-
