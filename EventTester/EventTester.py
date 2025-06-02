@@ -83,6 +83,36 @@ class EventServer:
         msg += self.acktag.to_bytes(1, 'little')
         msg += b'\x00\x00'
         msg += b'\x80' if allow else b'\x00'
+        return self.__ack(msg)
+        
+    def ctrlmsg(self, cmd, data=b''):
+        # ok ok ok: the way this works is that our command has to come
+        # first, no matter what.
+        msg = cmd[::-1] + data[::-1]
+        # and pad up to 8
+        msg = msg.ljust(8, b'\x00')
+        self.cs.sendto( msg, self.turfcs )
+        rmsg = self.cs.recv(1024)
+        return rmsg
+
+    def event_ack(self, hdr):
+        # just pass the first 8 byes of any fragment
+        # so e = es.event_receive()
+        #    es.event_ack(e[0][0:8])
+        msg = hdr[0:4]
+        msg += self.acktag.to_bytes(1, 'little')
+        msg += b'\x00\x00\x80'
+        return self.__ack(msg)        
+    
+    def event_receive(self):
+        ## This is the dumbest event receive ever
+        frg = []
+        for i in range(449):
+            frg.append(self.es.recv(self.fragment_size))
+        return frg
+    
+    def __ack(self, msg):
+        """ used internally by ackmsg and event_ack """
         self.cs.sendto( msg, self.turfack )
         # should have a timeout check here!!!!!
         rmsg = self.cs.recv(1024)
@@ -97,20 +127,3 @@ class EventServer:
         self.acktag = (self.acktag + 1) & 0xFF
         return (respaddr, resptag, ctlbyte)
             
-    def ctrlmsg(self, cmd, data=b''):
-        # ok ok ok: the way this works is that our command has to come
-        # first, no matter what.
-        msg = cmd[::-1] + data[::-1]
-        # and pad up to 8
-        msg = msg.ljust(8, b'\x00')
-        self.cs.sendto( msg, self.turfcs )
-        rmsg = self.cs.recv(1024)
-        return rmsg
-    
-    def event_receive(self):
-        ## This is the dumbest event receive ever
-        frg = []
-        for i in range(449):
-            frg.append(self.es.recv(self.fragment_size))
-        return frg
-        
