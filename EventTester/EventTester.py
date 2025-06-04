@@ -108,7 +108,7 @@ class EventServer:
         # as in it packs it IP (big endian), port (big endian)
         # For us fragment length is 47:32, fragment mask is effectively the remainder.
         # I should check this crap to see if you're exceeding capabilities!!!
-        data = fragment_len.to_bytes(2, 'big') + fragsrc_mask.to_bytes(4, 'big')
+        data = fragment_length.to_bytes(2, 'big') + fragsrc_mask.to_bytes(4, 'big')
         return self.ctrlmsg(b'PW', data=data)
         
     def event_set_extended_parameters(self, fragment_holdoff):
