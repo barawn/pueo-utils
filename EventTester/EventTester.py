@@ -95,6 +95,27 @@ class EventServer:
         rmsg = self.cs.recv(1024)
         return rmsg
 
+    def event_set_parameters(self, fragment_length, fragsrc_mask=0):
+        """ PW command. Max fragment length (in bytes), optionally fragment source mask. Length must be multiple of 8. """        
+        if fragment_length % 8:
+            fragment_length = 8*(fragment_length//8)
+            print(f'fragment length must be a multiple of 8: trimming to {fragment_length}')
+        # send as length - 8
+        fragment_length = fragment_length - 8
+        
+        # If you look at the OP message in open, you pack the data
+        # big-endian from high bytes to low bytes
+        # as in it packs it IP (big endian), port (big endian)
+        # For us fragment length is 47:32, fragment mask is effectively the remainder.
+        # I should check this crap to see if you're exceeding capabilities!!!
+        data = fragment_len.to_bytes(2, 'big') + fragsrc_mask.to_bytes(4, 'big')
+        return self.ctrlmsg(b'PW', data=data)
+        
+    def event_set_extended_parameters(self, fragment_holdoff):
+        """ Set extended parameters. Fragment holdoff (in ethernet clock cycles) """
+        data = b'\x00\x00' + fragment_holdoff.to_bytes(4, 'big')
+        return self.ctrlmsg(b'PX', data=data)              
+
     def event_ack(self, hdr):
         # just pass the first 8 byes of any fragment
         # so e = es.event_receive()
