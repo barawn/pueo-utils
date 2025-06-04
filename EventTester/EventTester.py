@@ -83,7 +83,7 @@ class EventServer:
         msg += self.acktag.to_bytes(1, 'little')
         msg += b'\x00\x00'
         msg += b'\x80' if allow else b'\x00'
-        return self.__ack(msg)
+        return self.__ack(msg, verbose=verbose)
         
     def ctrlmsg(self, cmd, data=b''):
         # ok ok ok: the way this works is that our command has to come
@@ -132,7 +132,7 @@ class EventServer:
             frg.append(self.es.recv(self.fragment_size))
         return frg
     
-    def __ack(self, msg):
+    def __ack(self, msg, verbose=False):
         """ used internally by ackmsg and event_ack """
         self.cs.sendto( msg, self.turfack )
         # should have a timeout check here!!!!!
