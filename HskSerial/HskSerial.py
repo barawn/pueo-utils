@@ -92,6 +92,14 @@ class HskPacket:
         return s
 
     @classmethod
+    def __pretty_turfio_current(cls, src, d, brd):
+        tioNum = HskPacket.turfioNum(src)
+        s = { f'T_TURFIO_{tioNum}' : cls.__turfio_hotswap_current(d[0:2]) }
+        for i in range(7):
+            s[f'T_SURF{i+1}HS_{tioNum'] = cls.__surf_hotswap_current(d[2*i+2:2*i+4])
+        return s
+    
+    @classmethod
     def __pretty_zynqmp_temp(cls, src, d, brd):
         return { f'T_APU_{brd}' : cls.__zynqmp_temp(d[0:2]),
                  f'T_RPU_{brd}' : cls.__zynqmp_temp(d[2:4]) }
@@ -109,9 +117,10 @@ class HskPacket:
     # the tuples are needed because commands are the same but return values are not.
     # the functions take source, data, board type (which is the second tuple element)
     prettifiers = {
-        ('eTemps', 'TURF') : __pretty_zynqmp_temp,        
+        ('eTemps', 'TURF') : __pretty_zynqmp_temp,
         ('eTemps', 'SURF') : __pretty_zynqmp_temp,
         ('eTemps', 'TURFIO') : __pretty_turfio_temp,
+        ('eCurrents', 'TURFIO') : __pretty_turfio_current,        
         ('eIdentify', 'TURF') : __pretty_zynqmp_identify,
         ('eIdentify', 'SURF') : __pretty_zynqmp_identify
     }
