@@ -67,6 +67,18 @@ class HskPacket:
         # this is 509.3140064/65536
         return (int.from_bytes(d, 'big') * 0.007771514990234375) - 280.2308787
     
+    @staticmethod
+    def __turfio_hotswap_current(d):
+        """ pass the bytes from the packet, returns the SURF hotswap current"""
+        ## 105.84/(2**12*0.125)
+        return int.from_bytes(d, 'big')*0.20671875
+    
+    @staticmethod
+    def __surf_hotswap_current(d):
+        """ pass the bytes from the packet, returns the SURF hotswap current"""
+        ## This is 12.51/4.762
+        return int.from_bytes(d, 'big')*2.62704745905 - 5380.19319614
+    
     ###################################################################
     #                 Pretty functions                                #
     ###################################################################
