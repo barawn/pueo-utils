@@ -96,7 +96,7 @@ class HskPacket:
         tioNum = HskPacket.turfioNum(src)
         s = { f'T_TURFIO_{tioNum}' : cls.__turfio_hotswap_current(d[0:2]) }
         for i in range(7):
-            s[f'T_SURF{i+1}HS_{tioNum'] = cls.__surf_hotswap_current(d[2*i+2:2*i+4])
+            s[f'T_SURF{i+1}HS_{tioNum}'] = cls.__surf_hotswap_current(d[2*i+2:2*i+4])
         return s
     
     @classmethod
