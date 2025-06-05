@@ -18,31 +18,27 @@ from functools import partial
 # - list of integers under 256
 # - anything else castable to bytes via bytes()
 class HskPacket:
+    # this is starting to become documentation...
     cmds = {
-        "ePingPong" : 0x00,
-        "eStatistics" : 0x0F,
-        "eTemps" : 0x10,
-        "eVolts" : 0x11,
-        "eIdentify" : 0x12,
-        "eCurrents" : 0x13,
-        "eStartState" : 0x20,
-        "eSleep" : 0x21,
-        "eFwParams" : 0x80,
-        "eFwNext" : 0x81,
-        "ePROMStartup" : 0x82,
-        "ePROMBitLoadOrder" : 0x83,
-        "ePROMSoftLoadOrder" : 0x84,
-        "ePROMOrientation" : 0x85,
-        "eLoadSoft" : 0x86,
-        "eSoftNext" : 0x87,
-        "eSoftNextReboot" : 0x88,
-        "eJournal" : 0xBD,
-        "eDownloadMode" : 0xBE,
-        "eRestart" : 0xBF,
-        "eEnable" : 0xC8,
-        "ePMBus" : 0xC9,
-        "eReloadFirmware" : 0xCA,
-        "eError" : 0xFF
+        "ePingPong" : (0x00, 'Send echo request to target'),
+        "eStatistics" : (0x0F, 'Get housekeeping packet statistics'),
+        "eTemps" : (0x10, 'Get device temperatures'),
+        "eVolts" : (0x11, 'Get device voltages'),
+        "eIdentify" : (0x12, 'Get identifying information for this device'),
+        "eCurrents" : (0x13, 'Get device currents'),
+        "eStartState" : (0x20, 'Get/set current startup state machine state'),
+        "eSleep" : (0x21, 'Put processor to sleep after specified time'),
+        "eFwParams" : (0x80, 'Get/set firmware parameters'),
+        "eFwNext" : (0x81, 'Get/set pointer to next firmware (loaded on next restart)'),
+        "eSoftNext" : (0x87, 'Get/set pointer to next software (loaded on next restart)'),
+        "eJournal" : (0xBD, 'Get the output of the journal'),
+        "eDownloadMode" : (0xBE, 'Place device in download mode'),
+        "eRestart" : (0xBF, 'Restart software on device'),
+        "eEnable" : (0xC8, 'Get/set the enables on device'),
+        "ePMBus" : (0xC9, 'Send PMBus commands or fetch replies'),
+        "eReloadFirmware" : (0xCA, 'Reload device firmware from specified address'),
+        "eCommandReset" : (0xCB, 'Send a command reset (0x01 (bitmask of TURFIOs) to reset TURFIOs)'),
+        "eError" : (0xFF, 'This is an error message')
         }
 
     ##################################################################
@@ -126,7 +122,7 @@ class HskPacket:
     }
 
 
-    strings = dict(zip(cmds.values(),cmds.keys()))
+    strings = dict(zip([ x[0] for x in cmds.values() ],cmds.keys()))
 
     def __init__(self,
                  dest,
@@ -143,7 +139,7 @@ class HskPacket:
         self.src = src
         if isinstance(cmd, str):
             if cmd in self.cmds:
-                self.cmd = self.cmds[cmd]
+                self.cmd = self.cmds[cmd][0]
             else:
                 raise ValueError("%s not in cmds table" % cmd)
         else:
