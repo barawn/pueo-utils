@@ -142,7 +142,7 @@ class EventServer:
         resptag = rmsg[4]
         if verbose:
             print(f'ack response: tag {resptag} addr {respaddr} ctl {hex(ctlbyte)}')
-            print(f'ack response: {rmsg.hex(sep=" ")}')
+            print(f'ack response: {tohex(rmsg, s=" ")}')
             
         # shoud do an ack check here but whatevs
         self.acktag = (self.acktag + 1) & 0xFF
