@@ -26,6 +26,7 @@ class HskPacket:
         "eVolts" : (0x11, 'Get device voltages'),
         "eIdentify" : (0x12, 'Get identifying information for this device'),
         "eCurrents" : (0x13, 'Get device currents'),
+        "eAurora" : (0x15, 'Get Aurora status'),
         "eStartState" : (0x20, 'Get/set current startup state machine state'),
         "eSleep" : (0x21, 'Put processor to sleep after specified time'),
         "eFwParams" : (0x80, 'Get/set firmware parameters'),
