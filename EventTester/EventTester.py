@@ -131,7 +131,27 @@ class EventServer:
         for i in range(449):
             frg.append(self.es.recv(self.fragment_size))
         return frg
-    
+
+    def decode_header(self, hdr):
+        hdr = {}
+        hdr['NWORDS'] = int.from_bytes(hdr[0x00:0x02], byteorder='little')
+        hdr['VERSION'] = hdr[3:1:-1].decode()
+        hdr['EVENT_NUM'] = int.from_bytes(hdr[0x04:0x08], byteorder='little')
+        hdr['EVENT_TIME'] = int.from_bytes(hdr[0x08:0x0C], byteorder='little')
+        hdr['LAST_PPS'] = int.from_bytes(hdr[0x0C:0x10], byteorder='little')
+        hdr['LLAST_PPS'] = int.from_bytes(hdr[0x10:0x14], byteorder='little')
+        meta = list(hdr[0x18:0x38])
+        tmeta = meta[7:32:8]
+        del meta[7:32:8]
+        hdr['META_SURF'] = meta
+        hdr['META_TURF'] = tmeta
+        hdr['RUNCFG'] = int.from_bytes(hdr[0x7C:0x7E], byteorder='little')
+        hdr['SURFWORDS'] = int.from_bytes(hdr[0x7E:0x80], byteorder='little')    
+    def print_header(self):
+        print(f'NWORDS: {int.from_bytes(hdr[0:2], byteorder="little")}')
+        print(f'VERSION: {hdr[3:1:-1].decode()}')
+        print(f'EVENT_NUM: {int.from_bytes(hdr[4:8],byteorder="little")}')
+        print(f'EVENT_TIME
     def __ack(self, msg, verbose=False):
         """ used internally by ackmsg and event_ack """
         self.cs.sendto( msg, self.turfack )
