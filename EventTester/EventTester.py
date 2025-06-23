@@ -19,7 +19,6 @@ def tohex(b, s=' '):
     
 class EventServer:
     SFC_IP = "10.68.65.1"
-    SPARE_IP = "10.68.65.8"
     
     def __init__(self,
                  local_ip=None,
