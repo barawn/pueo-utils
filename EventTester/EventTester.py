@@ -18,8 +18,11 @@ def tohex(b, s=' '):
         return b.hex(sep=s)
     
 class EventServer:
+    SFC_IP = "10.68.65.1"
+    SPARE_IP = "10.68.65.8"
+    
     def __init__(self,
-                 local_ip="10.68.65.1",
+                 local_ip=None,
                  local_port=21347,
                  local_event_port=21349,
                  remote_ip="10.68.65.81",
@@ -27,6 +30,8 @@ class EventServer:
                  # when set by SO_RCVBUF
                  rcvbuf=3*1024*1024
                  ):
+        if not local_ip:
+            local_ip = self.SFC_IP
         self.local_ip = ipaddress.ip_address(local_ip)
         self.local_port = local_port
         self.local_event_port = local_event_port
