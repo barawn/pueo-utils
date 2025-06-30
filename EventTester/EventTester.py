@@ -134,7 +134,9 @@ class EventServer:
         frg = []
         for i in range(449):
             frg.append(self.es.recv(self.fragment_size))
+        self.event_ack(frg[0][0:8])
         return frg
+
 
     def decode_header(self, hdr):
         h = {}
